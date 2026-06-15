@@ -114,4 +114,21 @@ docker run -p 8080:8080 jaumendes/go-fibonacci-api:1.0.0
 docker push jaumendes/go-fibonacci-api:1.0.0
 
 
+
 git checkout -b feature-dockerfile
+
+
+git log
+git status
+git branch
+git remote -v
+
+
+git config --list
+
+git config --global user.name "jaumendes"
+git config --global user.email "teu-email@example.com"
+
+
+# remover credentilals git , and add new if needed
+git push --set-upstream origin feature-dockerfile

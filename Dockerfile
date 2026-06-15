@@ -4,7 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-#RUN go mod init go-fibonacci-api
 RUN go mod tidy
 
 RUN go build -o main .
