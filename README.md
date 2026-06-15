@@ -91,6 +91,7 @@ docker build -t <username>/go-fibonacci-api:1.0.0 .
 
 ```bash
 docker run -p 8080:8080 <username>/go-fibonacci-api:1.0.0
+docker run -p 8090:8080 <username>/go-fibonacci-api:1.0.0
 ```
 
 ### 3. Login into Docker
@@ -103,4 +104,31 @@ docker login
 
 ```bash
 docker push <username>/go-fibonacci-api:1.0.0
+
+
+
 ```
+
+docker build -t  jaumendes/go-fibonacci-api:1.0.0 .
+docker run -p 8080:8080 jaumendes/go-fibonacci-api:1.0.0
+docker push jaumendes/go-fibonacci-api:1.0.0
+
+
+
+git checkout -b feature-dockerfile
+
+
+git log
+git status
+git branch
+git remote -v
+
+
+git config --list
+
+git config --global user.name "jaumendes"
+git config --global user.email "teu-email@example.com"
+
+
+# remover credentilals git , and add new if needed
+git push --set-upstream origin feature-dockerfile
