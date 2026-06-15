@@ -104,3 +104,7 @@ docker login
 ```bash
 docker push <username>/go-fibonacci-api:1.0.0
 ```
+
+docker build -t  jaumendes/go-fibonacci-api:1.0.0 .
+docker run -p 8080:8080 jaumendes/go-fibonacci-api:1.0.0
+docker push jaumendes/go-fibonacci-api:1.0.0
