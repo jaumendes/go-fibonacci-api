@@ -132,3 +132,17 @@ git config --global user.email "teu-email@example.com"
 
 # remover credentilals git , and add new if needed
 git push --set-upstream origin feature-dockerfile
+
+
+: erro a configurar student 
+
+entrar como ec2 
+ssh -i sua-chave.pem ec2-user@18.197.196.50
+
+sudo mkdir -p /home/student/.ssh
+sudo cp /home/ec2-user/.ssh/authorized_keys /home/student/.ssh/
+sudo chown -R student:student /home/student/.ssh
+sudo chmod 700 /home/student/.ssh
+sudo chmod 600 /home/student/.ssh/authorized_keys
+~
+<!--  -->
