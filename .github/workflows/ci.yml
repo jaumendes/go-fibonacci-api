@@ -10,8 +10,7 @@ env:
   OVERLAY: dev
   SSH_USERNAME: student 
   EC2_HOST: ec2-63-178-196-242.eu-central-1.compute.amazonaws.com
-  IMAGE_NAME: jaumendes/go-fibonacci-api
-
+  
 
 jobs:
   build-test-docker:
@@ -93,6 +92,8 @@ jobs:
     name: Deploy to EC2
     runs-on: ubuntu-latest
     environment: student-deploy  # <-- add required reviewers in repo settings
+    env:
+      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/go-fibonacci-api
 
     steps:
       - name: Install sshpass
