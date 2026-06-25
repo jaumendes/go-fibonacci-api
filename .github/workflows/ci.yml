@@ -7,13 +7,12 @@ on:
 
 env:
   APP_NAME: go-fibonacci-api
-  OVERLAY: dev
-  SSH_USERNAME: student 
+  SSH_USERNAME: student
   EC2_HOST: ec2-63-178-196-242.eu-central-1.compute.amazonaws.com
-  
 
 jobs:
   build-test-docker:
+    name: Build, Test & Push Docker Image
     runs-on: ubuntu-latest
 
     env:
@@ -24,12 +23,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.20
+          go-version: "1.20"
 
       - name: Verify Go installation
         run: go version
@@ -40,7 +39,7 @@ jobs:
             go mod init go-fibonacci-api
           fi
 
-      - name: Build the Go application
+      - name: Build application
         run: CGO_ENABLED=0 go build -o main .
 
       - name: Run unit tests
@@ -50,76 +49,79 @@ jobs:
         id: vars
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-        
-      - name: Log in to Docker Hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Docker image
-        run:  docker build -t $IMAGE_NAME:${{ steps.vars.outputs.SHORT_SHA }} .
+        run: |
+          docker build -t $IMAGE_NAME:${{ steps.vars.outputs.SHORT_SHA }} .
 
       - name: Push Docker image
-        run: docker push $IMAGE_NAME:${{ steps.vars.outputs.SHORT_SHA }}
+        run: |
+          docker push $IMAGE_NAME:${{ steps.vars.outputs.SHORT_SHA }}
 
   scan-image:
+    name: Scan Docker Image
     needs: build-test-docker
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install Trivy
+      - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: image
-          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/go-fibonacci-api:${{ needs.build-test-docker.outputs.short_sha }}
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/go-fibonacci-api:${{ needs.build-test-docker.outputs.SHORT_SHA }}
           format: table
-          exit-code: 0
           ignore-unfixed: true
+          exit-code: 0
 
-  #api-testing:
-   # needs: build-test-docker
-    #runs-on: ubuntu-latest
-
-    #steps:
-     # - name: Trigger API test workflow
-      #  uses: peter-evans/repository-dispatch@v2
-       # with:
-        #  token: ${{ secrets.GH_TOKEN }}
-          #event-type: run-api-tests
-         # client-payload: '{"image": "${{ secrets.DOCKERHUB_USERNAME }}/go-fibonacci-api", "tag":"${{ needs.build-test-docker.outputs.short_sha }}"}'
   deploy:
     name: Deploy to EC2
+    needs:
+      - build-test-docker
+      - scan-image
     runs-on: ubuntu-latest
-    environment: student-deploy  # <-- add required reviewers in repo settings
+    environment: student-deploy
+
     env:
       IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/go-fibonacci-api
 
     steps:
       - name: Install sshpass
-        run: sudo apt-get update && sudo apt-get install -y sshpass
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
 
       - name: Deploy container
         run: |
-          PORT=8080
-          IMAGE_REF="$IMAGE_NAME:${{ needs.build-test-docker.outputs.SHORT_SHA }}"
+          PORT="8080"
+          IMAGE_REF="${IMAGE_NAME}:${{ needs.build-test-docker.outputs.SHORT_SHA }}"
 
           sshpass -p "${{ secrets.STUDENT_PASSWORD }}" \
             ssh -o StrictHostKeyChecking=no \
-            "$SSH_USERNAME@$EC2_HOST" \
-            "IMAGE_REF='$IMAGE_REF' PORT='$PORT' bash -s" <<'EOF'
+            "${{ env.SSH_USERNAME }}@${{ env.EC2_HOST }}" \
+            "IMAGE_REF='${IMAGE_REF}' PORT='${PORT}' bash -s" << 'EOF'
           set -euo pipefail
 
-          echo "Pulling $IMAGE_REF"
-          docker pull "$IMAGE_REF"
+          echo "Pulling image: ${IMAGE_REF}"
+          docker pull "${IMAGE_REF}"
 
+          echo "Stopping any container publishing port ${PORT}..."
+          docker ps -q --filter "publish=${PORT}" | xargs -r docker stop
+
+          echo "Removing previous container..."
           docker rm -f go-fibonacci-api 2>/dev/null || true
 
+          echo "Starting new container..."
           docker run -d \
             --name go-fibonacci-api \
             --restart unless-stopped \
-            -p "$PORT:8080" \
-            "$IMAGE_REF"
+            -p "${PORT}:8080" \
+            "${IMAGE_REF}"
 
-          docker ps
+          echo "Deployment successful."
+          docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}'
           EOF
