@@ -10,6 +10,7 @@ env:
   OVERLAY: dev
   SSH_USERNAME: student 
   EC2_HOST: ec2-63-178-196-242.eu-central-1.compute.amazonaws.com
+  IMAGE_NAME: jaumendes/go-fibonacci-api
 
 
 jobs:
