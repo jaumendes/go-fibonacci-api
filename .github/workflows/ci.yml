@@ -8,6 +8,9 @@ on:
 env:
   APP_NAME: go-fibonacci-api
   OVERLAY: dev
+  SSH_USERNAME: student 
+  EC2_HOST: ec2-63-178-196-242.eu-central-1.compute.amazonaws.com
+
 
 jobs:
   build-test-docker:
@@ -85,3 +88,33 @@ jobs:
         #  token: ${{ secrets.GH_TOKEN }}
           #event-type: run-api-tests
          # client-payload: '{"image": "${{ secrets.DOCKERHUB_USERNAME }}/go-fibonacci-api", "tag":"${{ needs.build-test-docker.outputs.short_sha }}"}'
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    environment: student-deploy  # <-- add required reviewers in repo settings
+
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Deploy container
+        run: |
+          PORT="8080"
+          sshpass -p "${{ secrets.STUDENT_PASSWORD }}" \
+            ssh -o StrictHostKeyChecking=no \
+                "$SSH_USERNAME@$EC2_HOST" \
+                "IMAGE_REF='$IMAGE_NAME:${{ steps.vars.outputs.SHORT_SHA }}' PORT='${PORT}' bash -s" << 'EOF'
+          set -euo pipefail
+
+          echo "Pulling image: ${IMAGE_REF}"
+          docker pull "${IMAGE_REF}"
+
+          echo "Stopping any container publishing port ${PORT} (if any)..."
+          docker ps -q --filter "publish=${PORT}" | xargs -r docker stop
+
+          echo "Running container on host port ${PORT} -> container 8080..."
+          docker run -d -p "${PORT}:8080" "${IMAGE_REF}"
+
+          echo "Current containers:"
+          docker ps --format 'table {{.ID}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}'
+          EOF
